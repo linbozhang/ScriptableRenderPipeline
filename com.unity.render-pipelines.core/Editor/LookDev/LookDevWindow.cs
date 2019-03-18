@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -80,17 +81,35 @@ namespace UnityEditor.Rendering.LookDev
 
             var toolbar = new Toolbar() { name = "toolBar" };
             rootVisualElement.Add(toolbar);
-            var radiobar = new Toolbar();
-            radiobar.Add(new ToolbarButton() { text = "test1" });
-            radiobar.Add(new ToolbarButton() { text = "test2" });
-            radiobar.Add(new ToolbarButton() { text = "test3" });
-            toolbar.Add(radiobar);
-            toolbar.Add(new ToolbarSpacer());
-            toolbar.Add(new ToolbarButton() { text = "testqlegu" });
+            var customToolbar = new Toolbar();
+            var button1 = new ToolbarButton() { text = "1" };
+            button1.Add(new Image() { image = Texture2D.whiteTexture });
+            var button2 = new ToolbarToggle() { text = "2" };
+            button2.Q(null, ToolbarToggle.inputUssClassName).Add(new Image() { image = Texture2D.whiteTexture });
+            var button3 = new ToolbarToggle() { text = "" };
+            button3.Q(null, ToolbarToggle.inputUssClassName).Add(new Image() { image = Texture2D.whiteTexture });
+            button3.Q(null, ToolbarToggle.inputUssClassName).Add(new Label() { text = "3" });
+            var button4 = new ToolbarToggle() { text = "4" };
+            customToolbar.Add(button1);
+            customToolbar.Add(new ToolbarSpacer());
+            customToolbar.Add(button2);
+            customToolbar.Add(new ToolbarSpacer());
+            customToolbar.Add(button3);
+            customToolbar.Add(new ToolbarSpacer());
+            customToolbar.Add(button4);
+            toolbar.Add(customToolbar);
+
             toolbar.Add(new ToolbarSpacer());
 
             var trueRadioBar = new ToolbarRadio() { name = "toolBar" };
-            trueRadioBar.AddRadios(new[] { "0", "1", "2" });
+            trueRadioBar.AddRadios(new[] {
+                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSingle1"),
+                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSingle2"),
+                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSideBySide"),
+                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSideBySide"),
+                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSplit"),
+                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevZone"),
+                });
             trueRadioBar.RegisterCallback((ChangeEvent<int> evt) => Debug.Log(evt.newValue));
             toolbar.Add(trueRadioBar);
 
