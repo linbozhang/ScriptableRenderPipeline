@@ -15,6 +15,7 @@ def packages_list():
 
 def test_packages_list():
     return [
+       ("com.unity.testing.visualeffectgraph", os.path.join("com.unity.testing.visualeffectgraph"))
     ]
 
 if __name__ == "__main__":
