@@ -27,7 +27,7 @@ namespace UnityEditor.Rendering.LookDev
             window.titleContent = LookDevStyle.WindowTitleAndIcon;
         }
 
-        const string lastContextSavePath = "Library/LookDevConfig.asset";
+        const string lastRenderingDataSavePath = "Library/LookDevConfig.asset";
 
         static LookDevContext s_currentContext = UnityEngine.ScriptableObject.CreateInstance<LookDevContext>();
 
@@ -43,14 +43,14 @@ namespace UnityEditor.Rendering.LookDev
 
         public static void ResetConfig() => s_currentContext = UnityEngine.ScriptableObject.CreateInstance<LookDevContext>();
 
-        public static void LoadConfig(string path = lastContextSavePath)
+        public static void LoadConfig(string path = lastRenderingDataSavePath)
         {
             var last = InternalEditorUtility.LoadSerializedFileAndForget(path)?[0] as LookDevContext;
             if (last != null && !last.Equals(null))
                 s_currentContext = ((LookDevContext)last);
         }
 
-        public static void SaveConfig(string path = lastContextSavePath)
+        public static void SaveConfig(string path = lastRenderingDataSavePath)
             => InternalEditorUtility.SaveToSerializedFileAndForget(new[] { s_currentContext }, path, true);
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.UIElements;
@@ -6,17 +7,44 @@ using UnityEngine.UIElements;
 
 namespace UnityEditor.Rendering.LookDev
 {
+    public enum Layout
+    {
+        ViewA,
+        ViewB,
+        HorizontalSplit,
+        VerticalSplit,
+        CustomSplit,
+        CustomCircular
+    }
 
-    public enum Layout { ViewA, ViewB, HorizontalSplit, VerticalSplit, CustomSplit, CustomCircular }
-
+    /// <summary>
+    /// Displayer and User Interaction 
+    /// </summary>
     internal class LookDevWindow : EditorWindow
     {
-        VisualElement views;
-        VisualElement environment;
+        VisualElement m_MainContainer;
+        VisualElement m_ViewContainer;
+        VisualElement m_EnvironmentContainer;
 
         const string oneViewClass = "oneView";
         const string twoViewsClass = "twoViews";
-        const string showHDRIClass = "showHDRI";
+        const string showEnvironmentTabClass = "showHDRI";
+
+        Image m_FirstView = new Image();
+        Image m_SecondView = new Image();
+
+        public Texture2D firstOrFullView
+        {
+            set => m_FirstView.image = value;
+        }
+
+        public Texture2D secondView
+        {
+            set => m_SecondView.image = value;
+        }
+
+        public Rect firstOrFullViewRect => m_FirstView.contentRect;
+        public Rect secondViewRect => m_SecondView.contentRect;
 
         LayoutContext.Layout layout
         {
@@ -27,31 +55,32 @@ namespace UnityEditor.Rendering.LookDev
                 {
                     if (value == LayoutContext.Layout.HorizontalSplit || value == LayoutContext.Layout.VerticalSplit)
                     {
-                        if (views.ClassListContains(oneViewClass))
+                        if (m_ViewContainer.ClassListContains(oneViewClass))
                         {
-                            views.RemoveFromClassList(oneViewClass);
-                            views.AddToClassList(twoViewsClass);
+                            m_ViewContainer.RemoveFromClassList(oneViewClass);
+                            m_ViewContainer.AddToClassList(twoViewsClass);
                         }
                     }
                     else
                     {
-                        if (views.ClassListContains(twoViewsClass))
+                        if (m_ViewContainer.ClassListContains(twoViewsClass))
                         {
-                            views.RemoveFromClassList(twoViewsClass);
-                            views.AddToClassList(oneViewClass);
+                            m_ViewContainer.RemoveFromClassList(twoViewsClass);
+                            m_ViewContainer.AddToClassList(oneViewClass);
                         }
                     }
 
-                    if (views.ClassListContains(LookDev.currentContext.layout.viewLayout.ToString()))
-                        views.RemoveFromClassList(LookDev.currentContext.layout.viewLayout.ToString());
-                    views.AddToClassList(value.ToString());
+                    if (m_ViewContainer.ClassListContains(LookDev.currentContext.layout.viewLayout.ToString()))
+                        m_ViewContainer.RemoveFromClassList(LookDev.currentContext.layout.viewLayout.ToString());
+                    m_ViewContainer.AddToClassList(value.ToString());
 
                     LookDev.currentContext.layout.viewLayout = value;
+
+                    OnLayoutChanged?.Invoke(value);
                 }
             }
         }
-
-
+        
         bool showHDRI
         {
             get => LookDev.currentContext.layout.showHDRI;
@@ -61,13 +90,13 @@ namespace UnityEditor.Rendering.LookDev
                 {
                     if (value)
                     {
-                        if (!views.ClassListContains(showHDRIClass))
-                            views.AddToClassList(showHDRIClass);
+                        if (!m_MainContainer.ClassListContains(showEnvironmentTabClass))
+                            m_MainContainer.AddToClassList(showEnvironmentTabClass);
                     }
                     else
                     {
-                        if (views.ClassListContains(showHDRIClass))
-                            views.RemoveFromClassList(showHDRIClass);
+                        if (m_MainContainer.ClassListContains(showEnvironmentTabClass))
+                            m_MainContainer.RemoveFromClassList(showEnvironmentTabClass);
                     }
 
                     LookDev.currentContext.layout.showHDRI = value;
@@ -75,60 +104,26 @@ namespace UnityEditor.Rendering.LookDev
             }
         }
 
+        public event Action<LayoutContext.Layout> OnLayoutChanged;
+        // add other event here
+
         void OnEnable()
         {
-            rootVisualElement.styleSheets.Add(AssetDatabase.LoadAssetAtPath<StyleSheet>(LookDevStyle.k_uss));
+            rootVisualElement.styleSheets.Add(
+                AssetDatabase.LoadAssetAtPath<StyleSheet>(LookDevStyle.k_uss));
+            
+            CreateToolbar();
+            
+            m_MainContainer = new VisualElement() { name = "main" };
+            m_MainContainer.AddToClassList("container");
+            rootVisualElement.Add(m_MainContainer);
 
-            var toolbar = new Toolbar() { name = "toolBar" };
-            rootVisualElement.Add(toolbar);
-            var customToolbar = new Toolbar();
-            var button1 = new ToolbarButton() { text = "1" };
-            button1.Add(new Image() { image = Texture2D.whiteTexture });
-            var button2 = new ToolbarToggle() { text = "2" };
-            button2.Q(null, ToolbarToggle.inputUssClassName).Add(new Image() { image = Texture2D.whiteTexture });
-            var button3 = new ToolbarToggle() { text = "" };
-            button3.Q(null, ToolbarToggle.inputUssClassName).Add(new Image() { image = Texture2D.whiteTexture });
-            button3.Q(null, ToolbarToggle.inputUssClassName).Add(new Label() { text = "3" });
-            var button4 = new ToolbarToggle() { text = "4" };
-            customToolbar.Add(button1);
-            customToolbar.Add(new ToolbarSpacer());
-            customToolbar.Add(button2);
-            customToolbar.Add(new ToolbarSpacer());
-            customToolbar.Add(button3);
-            customToolbar.Add(new ToolbarSpacer());
-            customToolbar.Add(button4);
-            toolbar.Add(customToolbar);
+            CreateViews();
+            CreateEnvironment();
 
-            toolbar.Add(new ToolbarSpacer());
 
-            var trueRadioBar = new ToolbarRadio() { name = "toolBar" };
-            trueRadioBar.AddRadios(new[] {
-                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSingle1"),
-                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSingle2"),
-                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSideBySide"),
-                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSideBySide"),
-                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSplit"),
-                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevZone"),
-                });
-            trueRadioBar.RegisterCallback((ChangeEvent<int> evt) => Debug.Log(evt.newValue));
-            toolbar.Add(trueRadioBar);
 
-            views = new VisualElement() { name = "viewContainers" };
-            views.AddToClassList(LookDev.currentContext.layout.isMultiView ? twoViewsClass : oneViewClass);
-            views.AddToClassList("container");
-            if (showHDRI)
-                views.AddToClassList(showHDRIClass);
-            rootVisualElement.Add(views);
-
-            var viewA = new VisualElement() { name = "viewA" };
-            views.Add(viewA);
-            var viewB = new VisualElement() { name = "viewB" };
-            views.Add(viewB);
-            var hdri = new VisualElement() { name = "HDRI" };
-            views.Add(hdri);
-
-            viewA.Add(new Image() { image = UnityEngine.Texture2D.whiteTexture, scaleMode = UnityEngine.ScaleMode.ScaleToFit });
-
+            //Below is for TESTS only
             rootVisualElement.Add(new Button(() =>
             {
                 if (layout == LayoutContext.Layout.HorizontalSplit)
@@ -140,7 +135,64 @@ namespace UnityEditor.Rendering.LookDev
 
             rootVisualElement.Add(new Button(() => showHDRI ^= true)
             { text = "Show HDRI" });
+        }
 
+        void CreateToolbar()
+        {
+            var toolbarRadio = new ToolbarRadio() { name = "toolBar" };
+            toolbarRadio.AddRadios(new[] {
+                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSingle1"),
+                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSingle2"),
+                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSideBySide"),
+                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSideBySide"),
+                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSplit"),
+                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevZone"),
+                });
+            toolbarRadio.RegisterCallback((ChangeEvent<int> evt)
+                => OnLayoutChanged?.Invoke((LayoutContext.Layout)evt.newValue));
+            toolbarRadio.SetValueWithoutNotify((int)layout);
+
+            var toolbar = new Toolbar();
+            toolbar.Add(new Label() { text = "Layout:" });
+            toolbar.Add(toolbarRadio);
+            toolbar.Add(new ToolbarSpacer());
+            //to complete
+
+            rootVisualElement.Add(toolbar);
+        }
+
+        void CreateViews()
+        {
+            if (m_MainContainer == null || m_MainContainer.Equals(null))
+                throw new System.MemberAccessException("m_MainContainer should be assigned prior CreateViews()");
+
+            m_ViewContainer = new VisualElement() { name = "viewContainers" };
+            m_ViewContainer.AddToClassList(LookDev.currentContext.layout.isMultiView ? twoViewsClass : oneViewClass);
+            m_ViewContainer.AddToClassList("container");
+            m_MainContainer.Add(m_ViewContainer);
+
+            m_EnvironmentContainer = new VisualElement() { name = "environmentContainer" };
+            m_MainContainer.Add(m_EnvironmentContainer);
+
+            m_FirstView = new Image() { name = "viewA", image = Texture2D.blackTexture };
+            m_ViewContainer.Add(m_FirstView);
+            m_SecondView = new Image() { name = "viewB", image = Texture2D.blackTexture };
+            m_ViewContainer.Add(m_SecondView);
+        }
+
+        void CreateEnvironment()
+        {
+            if (m_MainContainer == null || m_MainContainer.Equals(null))
+                throw new System.MemberAccessException("m_MainContainer should be assigned prior CreateViews()");
+
+            m_EnvironmentContainer = new VisualElement() { name = "HDRI" };
+            if (showHDRI)
+                m_MainContainer.AddToClassList(showEnvironmentTabClass);
+
+            //to complete
+
+            //var hdri = new VisualElement() { name = "HDRI" };
+            //m_EnvironmentContainer.Add(hdri);
         }
     }
     
