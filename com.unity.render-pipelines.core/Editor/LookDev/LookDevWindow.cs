@@ -22,16 +22,27 @@ namespace UnityEditor.Rendering.LookDev
     /// </summary>
     internal class LookDevWindow : EditorWindow
     {
+        // /!\ WARNING:
+        //The following const are used in the uss.
+        //If you change them, update the uss file too.
+        const string k_MainContainerName = "mainContainer";
+        const string k_EnvironmentContainerName = "environmentContainer";
+        const string k_ViewContainerName = "viewContainer";
+        const string k_FirstViewName = "firstView";
+        const string k_SecondViewName = "secondView";
+        const string k_ToolbarName = "toolbar";
+        const string k_ToolbarRadioName = "toolbarRadio";
+        const string k_SharedContainerClass = "container";
+        const string k_OneViewClass = "oneView";
+        const string k_TwoViewsClass = "twoViews";
+        const string k_ShowEnvironmentPanelClass = "showEnvironmentPanel";
+
         VisualElement m_MainContainer;
         VisualElement m_ViewContainer;
         VisualElement m_EnvironmentContainer;
 
-        const string oneViewClass = "oneView";
-        const string twoViewsClass = "twoViews";
-        const string showEnvironmentTabClass = "showHDRI";
-
-        Image m_FirstView = new Image();
-        Image m_SecondView = new Image();
+        Image m_FirstView;
+        Image m_SecondView;
 
         public Texture2D firstOrFullView
         {
@@ -55,18 +66,18 @@ namespace UnityEditor.Rendering.LookDev
                 {
                     if (value == LayoutContext.Layout.HorizontalSplit || value == LayoutContext.Layout.VerticalSplit)
                     {
-                        if (m_ViewContainer.ClassListContains(oneViewClass))
+                        if (m_ViewContainer.ClassListContains(k_OneViewClass))
                         {
-                            m_ViewContainer.RemoveFromClassList(oneViewClass);
-                            m_ViewContainer.AddToClassList(twoViewsClass);
+                            m_ViewContainer.RemoveFromClassList(k_OneViewClass);
+                            m_ViewContainer.AddToClassList(k_TwoViewsClass);
                         }
                     }
                     else
                     {
-                        if (m_ViewContainer.ClassListContains(twoViewsClass))
+                        if (m_ViewContainer.ClassListContains(k_TwoViewsClass))
                         {
-                            m_ViewContainer.RemoveFromClassList(twoViewsClass);
-                            m_ViewContainer.AddToClassList(oneViewClass);
+                            m_ViewContainer.RemoveFromClassList(k_TwoViewsClass);
+                            m_ViewContainer.AddToClassList(k_OneViewClass);
                         }
                     }
 
@@ -81,25 +92,25 @@ namespace UnityEditor.Rendering.LookDev
             }
         }
         
-        bool showHDRI
+        bool showEnvironmentPanel
         {
-            get => LookDev.currentContext.layout.showHDRI;
+            get => LookDev.currentContext.layout.showEnvironmentPanel;
             set
             {
-                if (LookDev.currentContext.layout.showHDRI != value)
+                if (LookDev.currentContext.layout.showEnvironmentPanel != value)
                 {
                     if (value)
                     {
-                        if (!m_MainContainer.ClassListContains(showEnvironmentTabClass))
-                            m_MainContainer.AddToClassList(showEnvironmentTabClass);
+                        if (!m_MainContainer.ClassListContains(k_ShowEnvironmentPanelClass))
+                            m_MainContainer.AddToClassList(k_ShowEnvironmentPanelClass);
                     }
                     else
                     {
-                        if (m_MainContainer.ClassListContains(showEnvironmentTabClass))
-                            m_MainContainer.RemoveFromClassList(showEnvironmentTabClass);
+                        if (m_MainContainer.ClassListContains(k_ShowEnvironmentPanelClass))
+                            m_MainContainer.RemoveFromClassList(k_ShowEnvironmentPanelClass);
                     }
 
-                    LookDev.currentContext.layout.showHDRI = value;
+                    LookDev.currentContext.layout.showEnvironmentPanel = value;
                 }
             }
         }
@@ -114,8 +125,8 @@ namespace UnityEditor.Rendering.LookDev
             
             CreateToolbar();
             
-            m_MainContainer = new VisualElement() { name = "main" };
-            m_MainContainer.AddToClassList("container");
+            m_MainContainer = new VisualElement() { name = k_MainContainerName };
+            m_MainContainer.AddToClassList(k_SharedContainerClass);
             rootVisualElement.Add(m_MainContainer);
 
             CreateViews();
@@ -133,13 +144,13 @@ namespace UnityEditor.Rendering.LookDev
             })
             { text = "One/Two views" });
 
-            rootVisualElement.Add(new Button(() => showHDRI ^= true)
+            rootVisualElement.Add(new Button(() => showEnvironmentPanel ^= true)
             { text = "Show HDRI" });
         }
 
         void CreateToolbar()
         {
-            var toolbarRadio = new ToolbarRadio() { name = "toolBar" };
+            var toolbarRadio = new ToolbarRadio() { name = k_ToolbarRadioName };
             toolbarRadio.AddRadios(new[] {
                 CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSingle1"),
                 CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSingle2"),
@@ -152,7 +163,7 @@ namespace UnityEditor.Rendering.LookDev
                 => OnLayoutChanged?.Invoke((LayoutContext.Layout)evt.newValue));
             toolbarRadio.SetValueWithoutNotify((int)layout);
 
-            var toolbar = new Toolbar();
+            var toolbar = new Toolbar() { name = k_ToolbarName };
             toolbar.Add(new Label() { text = "Layout:" });
             toolbar.Add(toolbarRadio);
             toolbar.Add(new ToolbarSpacer());
@@ -166,33 +177,28 @@ namespace UnityEditor.Rendering.LookDev
             if (m_MainContainer == null || m_MainContainer.Equals(null))
                 throw new System.MemberAccessException("m_MainContainer should be assigned prior CreateViews()");
 
-            m_ViewContainer = new VisualElement() { name = "viewContainers" };
-            m_ViewContainer.AddToClassList(LookDev.currentContext.layout.isMultiView ? twoViewsClass : oneViewClass);
-            m_ViewContainer.AddToClassList("container");
+            m_ViewContainer = new VisualElement() { name = k_ViewContainerName };
+            m_ViewContainer.AddToClassList(LookDev.currentContext.layout.isMultiView ? k_TwoViewsClass : k_OneViewClass);
+            m_ViewContainer.AddToClassList(k_SharedContainerClass);
             m_MainContainer.Add(m_ViewContainer);
 
-            m_EnvironmentContainer = new VisualElement() { name = "environmentContainer" };
-            m_MainContainer.Add(m_EnvironmentContainer);
-
-            m_FirstView = new Image() { name = "viewA", image = Texture2D.blackTexture };
+            m_FirstView = new Image() { name = k_FirstViewName, image = Texture2D.blackTexture };
             m_ViewContainer.Add(m_FirstView);
-            m_SecondView = new Image() { name = "viewB", image = Texture2D.blackTexture };
+            m_SecondView = new Image() { name = k_SecondViewName, image = Texture2D.blackTexture };
             m_ViewContainer.Add(m_SecondView);
         }
 
         void CreateEnvironment()
         {
             if (m_MainContainer == null || m_MainContainer.Equals(null))
-                throw new System.MemberAccessException("m_MainContainer should be assigned prior CreateViews()");
+                throw new System.MemberAccessException("m_MainContainer should be assigned prior CreateEnvironment()");
 
-            m_EnvironmentContainer = new VisualElement() { name = "HDRI" };
-            if (showHDRI)
-                m_MainContainer.AddToClassList(showEnvironmentTabClass);
+            m_EnvironmentContainer = new VisualElement() { name = k_EnvironmentContainerName };
+            m_MainContainer.Add(m_EnvironmentContainer);
+            if (showEnvironmentPanel)
+                m_MainContainer.AddToClassList(k_ShowEnvironmentPanelClass);
 
             //to complete
-
-            //var hdri = new VisualElement() { name = "HDRI" };
-            //m_EnvironmentContainer.Add(hdri);
         }
     }
     
