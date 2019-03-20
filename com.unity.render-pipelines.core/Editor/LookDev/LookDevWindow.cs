@@ -16,11 +16,19 @@ namespace UnityEditor.Rendering.LookDev
         CustomSplit,
         CustomCircular
     }
-    
+
+    internal interface ILookDevDisplayer
+    {
+        Rect GetRect(ViewIndex index);
+        void SetTexture(ViewIndex index, Texture texture);
+
+        event Action<LayoutContext.Layout> OnLayoutChanged;
+    }
+
     /// <summary>
     /// Displayer and User Interaction 
     /// </summary>
-    internal class LookDevWindow : EditorWindow
+    internal class LookDevWindow : EditorWindow, ILookDevDisplayer
     {
         // /!\ WARNING:
         //The following const are used in the uss.
@@ -42,21 +50,7 @@ namespace UnityEditor.Rendering.LookDev
         VisualElement m_ViewContainer;
         VisualElement m_EnvironmentContainer;
 
-        Image m_FirstView;
-        Image m_SecondView;
-
-        public Texture2D firstOrFullView
-        {
-            set => m_FirstView.image = value;
-        }
-
-        public Texture2D secondView
-        {
-            set => m_SecondView.image = value;
-        }
-
-        public Rect firstOrFullViewRect => m_FirstView.contentRect;
-        public Rect secondViewRect => m_SecondView.contentRect;
+        Image[] m_Views = new Image[2];
 
         LayoutContext.Layout layout
         {
@@ -88,7 +82,7 @@ namespace UnityEditor.Rendering.LookDev
 
                     LookDev.currentContext.layout.viewLayout = value;
 
-                    OnLayoutChanged?.Invoke(value);
+                    OnLayoutChangedInternal?.Invoke(value);
                 }
             }
         }
@@ -116,8 +110,14 @@ namespace UnityEditor.Rendering.LookDev
             }
         }
 
-        public event Action<LayoutContext.Layout> OnLayoutChanged;
-        // add other event here
+        event Action<LayoutContext.Layout> OnLayoutChangedInternal;
+        event Action<LayoutContext.Layout> ILookDevDisplayer.OnLayoutChanged
+        {
+            add => OnLayoutChangedInternal += value;
+            remove => OnLayoutChangedInternal -= value;
+        }
+
+        //public event Action OnWindowClosed;
 
         void OnEnable()
         {
@@ -132,6 +132,11 @@ namespace UnityEditor.Rendering.LookDev
 
             CreateViews();
             CreateEnvironment();
+        }
+
+        void OnDisable()
+        {
+            Debug.Log("Closed?");
         }
 
         void CreateToolbar()
@@ -183,10 +188,10 @@ namespace UnityEditor.Rendering.LookDev
             m_ViewContainer.AddToClassList(k_SharedContainerClass);
             m_MainContainer.Add(m_ViewContainer);
 
-            m_FirstView = new Image() { name = k_FirstViewName, image = Texture2D.blackTexture };
-            m_ViewContainer.Add(m_FirstView);
-            m_SecondView = new Image() { name = k_SecondViewName, image = Texture2D.blackTexture };
-            m_ViewContainer.Add(m_SecondView);
+            m_Views[(int)ViewIndex.FirstOrFull] = new Image() { name = k_FirstViewName, image = Texture2D.blackTexture };
+            m_ViewContainer.Add(m_Views[(int)ViewIndex.FirstOrFull]);
+            m_Views[(int)ViewIndex.Second] = new Image() { name = k_SecondViewName, image = Texture2D.blackTexture };
+            m_ViewContainer.Add(m_Views[(int)ViewIndex.Second]);
         }
 
         void CreateEnvironment()
@@ -201,6 +206,12 @@ namespace UnityEditor.Rendering.LookDev
 
             //to complete
         }
+
+        Rect ILookDevDisplayer.GetRect(ViewIndex index)
+            => m_Views[(int)index].contentRect;
+
+        void ILookDevDisplayer.SetTexture(ViewIndex index, Texture texture)
+            => m_Views[(int)index].image = texture;
     }
     
 }

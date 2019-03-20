@@ -21,7 +21,7 @@ namespace UnityEditor.Rendering.LookDev
         public Layout viewLayout;
         public bool showEnvironmentPanel;
 
-        internal LookDevGizmoState gizmoState;
+        internal LookDevGizmoState gizmoState = new LookDevGizmoState();
 
         public bool isSimpleView => viewLayout == Layout.FullA || viewLayout == Layout.FullB;
         public bool isMultiView => viewLayout == Layout.HorizontalSplit || viewLayout == Layout.VerticalSplit;

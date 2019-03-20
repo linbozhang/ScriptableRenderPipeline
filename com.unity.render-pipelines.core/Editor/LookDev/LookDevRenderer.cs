@@ -3,20 +3,57 @@ using UnityEngine.Rendering;
 
 namespace UnityEditor.Rendering.LookDev
 {
+    public enum ViewIndex
+    {
+        FirstOrFull,
+        Second
+    };
+
+    enum ViewCompositionIndex
+    {
+        First = ViewIndex.FirstOrFull,
+        Second = ViewIndex.Second,
+        Composite
+    };
+
     class LookDevRenderTextureCache
     {
-        public enum RT { First, Second, Composite };
-
         RenderTexture[] m_RTs = new RenderTexture[3];
 
-        RenderTexture this[RT index]
+        public RenderTexture this[ViewCompositionIndex index]
             => m_RTs[(int)index];
+        
+        public void UpdateSize(Rect rect, ViewCompositionIndex index)
+        {
+            int width = (int)rect.width;
+            int height = (int)rect.height;
+            if (m_RTs[(int)index] == null
+                || width != m_RTs[(int)index].width
+                || height != m_RTs[(int)index].height)
+                m_RTs[(int)index] = new RenderTexture(
+                    width, height, 0,
+                    RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
+        }
+    }
 
-        //TODO: check resizing
-        public void UpdateSize(Rect rect, RT index)
-            => m_RTs[(int)index] = new RenderTexture(
-                (int)rect.width, (int)rect.height, 0,
-                RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
+    public class SceneContent
+    {
+        //TODO: list?
+        public GameObject contentObject { get; set; }
+
+        //TODO: lights
+    }
+
+    public class LookDevContent
+    {
+        SceneContent[] m_SCs = new SceneContent[2]
+        {
+            new SceneContent(),
+            new SceneContent()
+        };
+
+        public SceneContent this[ViewIndex index]
+            => m_SCs[(int)index];
     }
 
     /// <summary>
@@ -24,9 +61,31 @@ namespace UnityEditor.Rendering.LookDev
     /// </summary>
     internal class LookDevRenderer
     {
-        LookDevRenderTextureCache m_Textures;
+        ILookDevDisplayer displayer;
+        LookDevContext context;
+        LookDevContent content;
+        LookDevRenderTextureCache m_RenderTextures = new LookDevRenderTextureCache();
+        PreviewRenderUtility previewUtility;
 
-        LookDevContext context => LookDev.currentContext;
+        public LookDevRenderer(
+            ILookDevDisplayer displayer,
+            LookDevContext context,
+            LookDevContent content)
+        {
+            this.displayer = displayer;
+            this.context = context;
+            this.content = content;
+
+            previewUtility = new PreviewRenderUtility();
+
+            EditorApplication.update += Render;
+        }
+
+        ~LookDevRenderer()
+        {
+            EditorApplication.update -= Render;
+            previewUtility.Cleanup();
+        }
 
         public void Render()
         {
@@ -53,10 +112,10 @@ namespace UnityEditor.Rendering.LookDev
                 switch (context.layout.viewLayout)
                 {
                     case LayoutContext.Layout.FullA:
-                    RenderSingle(LookDevRenderTextureCache.RT.First);
+                    RenderSingle(ViewCompositionIndex.First);
                     break;
                 case LayoutContext.Layout.FullB:
-                    RenderSingle(LookDevRenderTextureCache.RT.Second);
+                    RenderSingle(ViewCompositionIndex.Second);
                     break;
                     case LayoutContext.Layout.HorizontalSplit:
                     case LayoutContext.Layout.VerticalSplit:
@@ -70,13 +129,24 @@ namespace UnityEditor.Rendering.LookDev
             //}
         }
 
-        void RenderSingle(LookDevRenderTextureCache.RT index)
+        bool IsNullArea(Rect r)
+            => r.width == 0 || r.height == 0
+            || float.IsNaN(r.width) || float.IsNaN(r.height);
+
+        void RenderSingle(ViewCompositionIndex index)
         {
+            Rect rect = displayer.GetRect((ViewIndex)index);
+            if (IsNullArea(rect))
+                return;
 
-            //UpdateRenderTexture(m_PreviewRects[2]);
+            m_RenderTextures.UpdateSize(rect, index);
 
-            //RenderScene(m_PreviewRects[2], m_Textures[index], m_PreviewUtilityContexts[index], m_LookDevConfig.currentObjectInstances[index], m_LookDevConfig.cameraState[index], false);
-            //RenderCompositing(m_PreviewRects[2], m_PreviewUtilityContexts[index], m_PreviewUtilityContexts[index], false);
+            var texture = RenderScene(
+                rect,
+                //context,
+                content[(ViewIndex)index].contentObject);
+
+            displayer.SetTexture((ViewIndex)index, texture);
         }
 
         void RenderSideBySide()
@@ -89,6 +159,43 @@ namespace UnityEditor.Rendering.LookDev
 
         }
 
+        private Texture RenderScene(Rect previewRect, GameObject currentObject)
+        {
+            previewUtility.BeginPreview(previewRect, "IN BigTitle inner");
+            
+            previewUtility.camera.renderingPath = RenderingPath.DeferredShading;
+            previewUtility.camera.backgroundColor = Color.white;
+            previewUtility.camera.allowHDR = true;
+
+            //for (int lightIndex = 0; lightIndex < 2; lightIndex++)
+            //{
+            //    previewUtility.lights[lightIndex].enabled = false;
+            //    previewUtility.lights[lightIndex].intensity = 0.0f;
+            //    previewUtility.lights[lightIndex].shadows = LightShadows.None;
+            //}
+            
+            //previewUtility.ambientColor = new Color(0.0f, 0.0f, 0.0f, 0.0f);
+
+            //RenderSettings.ambientIntensity = 1.0f; // fix this to 1, this parameter should not exist!
+            //RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox; // Force skybox for our HDRI
+            //RenderSettings.reflectionIntensity = 1.0f;
+            
+            if (currentObject != null)
+            {
+                foreach (Renderer renderer in currentObject.GetComponentsInChildren<Renderer>())
+                    renderer.enabled = true;
+            }
+
+            previewUtility.Render(true, false);
+
+            if (currentObject != null)
+            {
+                foreach (Renderer renderer in currentObject.GetComponentsInChildren<Renderer>())
+                    renderer.enabled = false;
+            }
+
+            return previewUtility.EndPreview();
+        }
 
     }
 }
