@@ -16,7 +16,7 @@ namespace UnityEditor.Rendering.LookDev
         CustomSplit,
         CustomCircular
     }
-
+    
     /// <summary>
     /// Displayer and User Interaction 
     /// </summary>
@@ -136,13 +136,13 @@ namespace UnityEditor.Rendering.LookDev
 
         void CreateToolbar()
         {
-            // Layout swapper
+            // Layout swapper part
             var toolbarRadio = new ToolbarRadio() { name = k_ToolbarRadioName };
             toolbarRadio.AddRadios(new[] {
                 CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSingle1"),
                 CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSingle2"),
-                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSideBySide"),
-                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSideBySide"),
+                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSideBySideVertical"),
+                CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSideBySideHorizontal"),
                 CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSplit"),
                 CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevZone"),
                 });
@@ -150,7 +150,7 @@ namespace UnityEditor.Rendering.LookDev
                 => layout = (LayoutContext.Layout)evt.newValue);
             toolbarRadio.SetValueWithoutNotify((int)layout);
 
-            // Environment
+            // Environment part
             var toolbarEnvironment = new Toolbar() { name = k_ToolbarEnvironmentName };
             var showEnvironmentToggle = new ToolbarToggle() { text = "Show Environment" };
             showEnvironmentToggle.RegisterCallback((ChangeEvent<bool> evt)
@@ -158,7 +158,9 @@ namespace UnityEditor.Rendering.LookDev
             showEnvironmentToggle.SetValueWithoutNotify(showEnvironmentPanel);
             toolbarEnvironment.Add(showEnvironmentToggle);
 
+            //other parts to be completed
 
+            // Aggregate parts
             var toolbar = new Toolbar() { name = k_ToolbarName };
             toolbar.Add(new Label() { text = "Layout:" });
             toolbar.Add(toolbarRadio);

@@ -53,24 +53,24 @@ namespace UnityEditor.Rendering.LookDev
                 switch (context.layout.viewLayout)
                 {
                     case LayoutContext.Layout.FullA:
-                    RenderPreviewSingle(LookDevRenderTextureCache.RT.First);
+                    RenderSingle(LookDevRenderTextureCache.RT.First);
                     break;
                 case LayoutContext.Layout.FullB:
-                    RenderPreviewSingle(LookDevRenderTextureCache.RT.Second);
+                    RenderSingle(LookDevRenderTextureCache.RT.Second);
                     break;
                     case LayoutContext.Layout.HorizontalSplit:
                     case LayoutContext.Layout.VerticalSplit:
-                        RenderPreviewSideBySide();
+                        RenderSideBySide();
                         break;
                     case LayoutContext.Layout.CustomSplit:
                     case LayoutContext.Layout.CustomCircular:
-                        RenderPreviewDualView();
+                        RenderDualView();
                         break;
                 }
             //}
         }
 
-        void RenderPreviewSingle(LookDevRenderTextureCache.RT index)
+        void RenderSingle(LookDevRenderTextureCache.RT index)
         {
 
             //UpdateRenderTexture(m_PreviewRects[2]);
@@ -79,12 +79,12 @@ namespace UnityEditor.Rendering.LookDev
             //RenderCompositing(m_PreviewRects[2], m_PreviewUtilityContexts[index], m_PreviewUtilityContexts[index], false);
         }
 
-        void RenderPreviewSideBySide()
+        void RenderSideBySide()
         {
 
         }
 
-        void RenderPreviewDualView()
+        void RenderDualView()
         {
 
         }
