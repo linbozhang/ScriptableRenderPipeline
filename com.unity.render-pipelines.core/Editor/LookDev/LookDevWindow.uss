@@ -32,7 +32,6 @@
     flex: 0.5;
 }
 
-
 .showEnvironmentPanel > #environmentContainer {
 	width: 200px;
 }
@@ -52,6 +51,14 @@
     padding-left: 1px;
 }
 
+#toolbar > .unity-label {
+    padding-top: 3px;
+    padding-bottom: 0px;
+}
+
+#toolbarEnvironment {
+    width: 200px;
+}
 
 /* TEST UNDER THIS LINE */
 #firstView {

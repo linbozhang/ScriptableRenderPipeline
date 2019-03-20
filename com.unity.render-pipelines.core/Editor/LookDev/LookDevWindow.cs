@@ -32,6 +32,7 @@ namespace UnityEditor.Rendering.LookDev
         const string k_SecondViewName = "secondView";
         const string k_ToolbarName = "toolbar";
         const string k_ToolbarRadioName = "toolbarRadio";
+        const string k_ToolbarEnvironmentName = "toolbarEnvironment";
         const string k_SharedContainerClass = "container";
         const string k_OneViewClass = "oneView";
         const string k_TwoViewsClass = "twoViews";
@@ -131,25 +132,11 @@ namespace UnityEditor.Rendering.LookDev
 
             CreateViews();
             CreateEnvironment();
-
-
-
-            //Below is for TESTS only
-            rootVisualElement.Add(new Button(() =>
-            {
-                if (layout == LayoutContext.Layout.HorizontalSplit)
-                    layout = LayoutContext.Layout.FullA;
-                else if (layout == LayoutContext.Layout.FullA)
-                    layout = LayoutContext.Layout.HorizontalSplit;
-            })
-            { text = "One/Two views" });
-
-            rootVisualElement.Add(new Button(() => showEnvironmentPanel ^= true)
-            { text = "Show HDRI" });
         }
 
         void CreateToolbar()
         {
+            // Layout swapper
             var toolbarRadio = new ToolbarRadio() { name = k_ToolbarRadioName };
             toolbarRadio.AddRadios(new[] {
                 CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevSingle1"),
@@ -160,8 +147,17 @@ namespace UnityEditor.Rendering.LookDev
                 CoreEditorUtils.LoadIcon(LookDevStyle.k_IconFolder, "LookDevZone"),
                 });
             toolbarRadio.RegisterCallback((ChangeEvent<int> evt)
-                => OnLayoutChanged?.Invoke((LayoutContext.Layout)evt.newValue));
+                => layout = (LayoutContext.Layout)evt.newValue);
             toolbarRadio.SetValueWithoutNotify((int)layout);
+
+            // Environment
+            var toolbarEnvironment = new Toolbar() { name = k_ToolbarEnvironmentName };
+            var showEnvironmentToggle = new ToolbarToggle() { text = "Show Environment" };
+            showEnvironmentToggle.RegisterCallback((ChangeEvent<bool> evt)
+                => showEnvironmentPanel = evt.newValue);
+            showEnvironmentToggle.SetValueWithoutNotify(showEnvironmentPanel);
+            toolbarEnvironment.Add(showEnvironmentToggle);
+
 
             var toolbar = new Toolbar() { name = k_ToolbarName };
             toolbar.Add(new Label() { text = "Layout:" });
@@ -169,6 +165,9 @@ namespace UnityEditor.Rendering.LookDev
             toolbar.Add(new ToolbarSpacer());
             //to complete
 
+
+            toolbar.Add(new ToolbarSpacer() { flex = true });
+            toolbar.Add(toolbarEnvironment);
             rootVisualElement.Add(toolbar);
         }
 
